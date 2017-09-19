@@ -1,0 +1,120 @@
+<project name="war" default="main" basedir=".">
+
+<property name="src.dir" location="src" />
+<property name="test.dir" location="src" />
+<property name="lib.dir" location="lib" />
+<property name="resources.dir" location="resources" />
+
+<property name="web.dir" value="war" />
+<property name="web.classes.dir" location="${web.dir}/WEB-INF/classes" />
+<property name="dist.dir" value="dist" />
+<property name="reports.tests" value="test-report" />
+
+<!-- Cobertura Properties-->
+<property name="cobertura.lib" value="lib" />
+<property name="cobertura.report.dir" value="cobertura/report" />
+
+	<target name="clean">
+		<delete dir="${web.classes.dir}" />
+		<delete dir="${dist.dir}" />
+		<delete dir="${reports.tests}" />
+		<delete dir="${cobertura}" />
+		<delete file="cobertura.ser" />
+	</target>
+	
+	<target name="init" depends="clean">
+		<mkdir dir="${web.classes.dir}" />
+		<mkdir dir="${dist.dir}" />
+		<mkdir dir="${reports.tests}" />
+		<mkdir dir="${cobertura.report.dir}" />
+	</target>
+	
+	<path id="compile-classpath">
+		<fileset dir="lib">
+			<include name="*.jar"/>
+        </fileset>
+	</path>	
+  
+	<target name="compile" depends="init">
+		<javac srcdir="${src.dir}" destdir="${web.classes.dir}">
+			<classpath refid="compile-classpath"/>
+		</javac>
+	</target>
+	
+	<target name="junit" depends="compile">
+		<junit printsummary="yes" haltonfailure="no">
+			<classpath refid="compile-classpath" />
+			<classpath location="${web.classes.dir}" />
+			<formatter type="plain"/>
+			<formatter type="xml"/>
+			
+			<batchtest fork="yes" todir="${reports.tests}">
+				<fileset dir="${src.dir}">
+					<include name="**/*Test*.java"/>				
+				</fileset>
+			</batchtest>
+			
+		</junit>
+	</target>
+	
+	<target name="war" depends="junit">
+
+		<copy todir="${web.classes.dir}">
+			<fileset dir="${resources.dir}">
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+		
+		<war destfile="${dist.dir}/app.war" webxml="${web.dir}/WEB-INF/web.xml" >
+			<webinf dir="${web.dir}/WEB-INF" />
+			<lib dir="${lib.dir}" >
+				<include name="**/*.jar"/>
+			</lib>	
+			<zipfileset dir="resources" prefix="resources" />
+			<classes dir="${web.dir}/WEB-INF/classes"/>
+		</war>
+	</target>
+	
+	<!-- Cobertura -->
+	<path id="cobertura.classpath">
+		<fileset dir="${cobertura.lib}">
+			<include name="**/cobertura-2.1.1.jar" />
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	
+	<path id="cobertura-auxpath">           
+	   <fileset dir="${web.classes.dir}" defaultexcludes="true">
+			   <include name="**/*.class" />
+	   </fileset>
+	   <fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+	   </fileset>
+    </path>
+	
+	<taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
+	
+	<target name="cobertura-instrumentation" depends="war">
+		<delete file="${cobertura.instrumented.dir}/cobertura.ser" />
+		<cobertura-instrument todir="${cobertura.instrumented.dir}">
+			<include name="**classes/**/*.*.class" />
+			<exclude name="**/classes/**/Test*.class" />
+		</cobertura-instrument>	
+	</target>
+	<target name="cobertura-report" depends="cobertura-instrumentation">
+		<cobertura-report format="xml" datafile="cobertura.ser" destdir="${cobertura.report.dir}">
+			<fileset dir="${src.dir}">
+				<include name="**/com/**/*.java" />
+				<!--<exclude name="**/com/**/Test*.java" />-->
+			</fileset>	
+		</cobertura-report>
+		<cobertura-report format="html" datafile="cobertura.ser" destdir="${cobertura.report.dir}">
+			<fileset dir="${src.dir}">
+				<include name="**/com/**/*.java" />
+				<!--<exclude name="**/com/**/Test*.java" />-->
+			</fileset>	
+		</cobertura-report>
+	</target>
+		
+</project>
